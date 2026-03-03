@@ -852,6 +852,13 @@ class Go1Robot(BaseTask):
         self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
         if self.cfg.terrain.measure_heights:
             self.height_points = self._init_height_points()
+            x_points = self.height_points[0, :, 0]
+            y_points = self.height_points[0, :, 1]
+            x_mask = (x_points >= -0.2) & (x_points <= 0.2)  # 0.4m length
+            y_mask = (y_points >= -0.15) & (y_points <= 0.15)  # 0.3m width
+            self.base_height_scan_mask = (x_mask & y_mask).float()
+            self.num_base_height_scan_points = self.base_height_scan_mask.sum()
+            assert self.num_base_height_scan_points > 0, "No height scan points within the specified area."
         self.measured_heights = self._get_heights()
         self.base_height_points = self._init_base_height_points()
 
@@ -1688,3 +1695,38 @@ class Go1Robot(BaseTask):
     def _reward_feet_contact_forces_up(self):
         # penalize high contact forces
         return torch.clamp(-self.projected_gravity[:,2],0,1)*torch.sum((torch.norm(self.contact_forces[:, self.feet_indices, :], dim=-1) -  100).clip(min=0.), dim=1)
+
+    def _get_base_height(self):
+        if not self.cfg.terrain.measure_heights:
+            return self.root_states[:, 2]
+        # 根据高度扫描点计算base link到地面估计高度
+        masked_heights = self.measured_heights * self.base_height_scan_mask.unsqueeze(0)
+        sum_heights = masked_heights.sum(dim=1)
+        estimated_ground_z = sum_heights / self.num_base_height_scan_points
+
+        base_z = self.root_states[:, 2] 
+        base_height = base_z - estimated_ground_z  # (N,)
+        return base_height
+
+    def _reward_feet_regulation(self):
+        # CTS抬腿正则奖励, 在脚末端速度增大同时, 要求高度尽可能高
+        base_height = self._get_base_height()  # 更新刚体空间位置 (开悟比赛无法修改环境, 只能在奖励中完成计算了)
+        feet_pos = self.rigid_body_states.view(self.num_envs, self.num_bodies, 13)[:, self.feet_indices, 0:3]
+        feet_xy_vel = self.rigid_body_states.view(self.num_envs, self.num_bodies, 13)[:, self.feet_indices, 7:9]
+        base_pos = self.root_states[:, 0:3].unsqueeze(1)
+        delta_feet = feet_pos - base_pos
+        feet2base_height = (delta_feet * self.projected_gravity.unsqueeze(1)).sum(-1)  # 脚相对于身体的高度 (N, 4)
+        feet_height = torch.clamp(base_height.unsqueeze(1) - feet2base_height, min=0.0)  # 脚相对于地面的高度 (N, 4)
+        rew = (feet_xy_vel.pow(2).sum(-1) * torch.exp(-feet_height / (0.025 * self.cfg.rewards.base_height_target))).sum(-1)
+        return rew
+
+    def _reward_x_command_hip_regular(self):
+        hip_dof_names = ['FL_hip_joint', 'FR_hip_joint', 'RL_hip_joint', 'RR_hip_joint']
+        hip_dof_indices = [0, 3, 6, 9]
+        hip_pos = self.dof_pos[:, hip_dof_indices]
+        cmd_norm = torch.norm(self.commands[:, :3], dim=1)
+        x_command_ratio = torch.where(cmd_norm > 1e-8,
+                                      torch.abs(self.commands[:, 0]) / cmd_norm,
+                                      torch.zeros_like(cmd_norm))        
+        rew = torch.abs(hip_pos[:,0]+hip_pos[:,1]) + torch.abs(hip_pos[:,2]+hip_pos[:,3])
+        return rew * x_command_ratio

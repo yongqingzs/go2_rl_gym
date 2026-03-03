@@ -34,15 +34,15 @@ class GO1Cfg( LeggedRobotCfg ):
     class init_state( LeggedRobotCfg.init_state ):
         pos = [0.0, 0.0, 0.42] # x,y,z [m]
         default_joint_angles = { # = target angles [rad] when action = 0.0
-            'FL_hip_joint': 0.1,   # [rad]
-            'RL_hip_joint': 0.1,   # [rad]
-            'FR_hip_joint': -0.1 ,  # [rad]
-            'RR_hip_joint': -0.1,   # [rad]
+            'FL_hip_joint': 0.0,   # [rad]
+            'RL_hip_joint': 0.0,   # [rad]
+            'FR_hip_joint': -0.0 ,  # [rad]
+            'RR_hip_joint': -0.0,   # [rad]
 
             'FL_thigh_joint': 0.8,     # [rad]
-            'RL_thigh_joint': 1.,   # [rad]
+            'RL_thigh_joint': 0.8,   # [rad]
             'FR_thigh_joint': 0.8,     # [rad]
-            'RR_thigh_joint': 1.,   # [rad]
+            'RR_thigh_joint': 0.8,   # [rad]
 
             'FL_calf_joint': -1.5,   # [rad]
             'RL_calf_joint': -1.5,    # [rad]
@@ -197,6 +197,7 @@ class GO1Cfg( LeggedRobotCfg ):
             base_height = -5
             # only one
             foot_clearance = -0.0
+            feet_regulation = -0.0
             action_rate = -0.01
             smoothness = -0.01
             feet_air_time = 1
@@ -215,6 +216,7 @@ class GO1Cfg( LeggedRobotCfg ):
             hip_pos0 = -0.05
             thigh_pose0 = -0.01
             calf_pose0 = -0.01
+            x_command_hip_regular = -0.0  # when x command exists, encourage symmetrical hip positions
             feet_contact_forces = -0.00015
             trot = 0.0
             # foot_mirror_up = -0.05
@@ -238,7 +240,7 @@ class GO1CfgCTS(LeggedRobotCfgCTS):
         run_name = ''
         experiment_name = 'go1h_cts'
         max_iterations = 150000
-        save_interval = 500
+        save_interval = 1000
     
     class policy(LeggedRobotCfgCTS.policy):
         latent_dim = 32
