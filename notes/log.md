@@ -72,4 +72,16 @@ feet_air_time = 0
 """
 22000 尚未到 6
 """
+
+# like b2, but:
+hip_pos0 = 0
+hip_pos1 = -0.05
+# b8
+
+# like b2, but:
+orientation = -0.0
+torques = -1e-4
+hip_pos0 = 0
+hip_pos1 = -0.05
+# b9
 ```

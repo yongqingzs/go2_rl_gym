@@ -213,7 +213,8 @@ class GO1Cfg( LeggedRobotCfg ):
             # hip_pos = -0.05
             # thigh_pose = -0.01
             # calf_pose = -0.01
-            hip_pos0 = -0.05
+            # hip_pos0 = -0.05
+            hip_pos1 = -0.05
             thigh_pose0 = -0.01
             calf_pose0 = -0.01
             x_command_hip_regular = -0.0  # when x command exists, encourage symmetrical hip positions
@@ -222,6 +223,50 @@ class GO1Cfg( LeggedRobotCfg ):
             # foot_mirror_up = -0.05
             feet_mirror = -0.1
             # foot_slide_up = -0.03
+
+        only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
+        tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
+        soft_dof_pos_limit = 0.9 # percentage of urdf limits, values above this limit are penalized
+        soft_dof_vel_limit = 1.
+        soft_torque_limit = 1.
+        base_height_target = 0.28
+        max_contact_force = 100. # forces above this value are penalized
+        clearance_height_target = -0.22
+        cycle_time=0.5  # for trot
+
+    class rewards2( LeggedRobotCfg.rewards ):
+        "reward 2"
+        class scales:
+            tracking_lin_vel = 1.0
+            tracking_ang_vel = 0.5
+            lin_vel_z = -2.0
+            ang_vel_xy = -0.05
+            orientation = -0.0
+            dof_acc = -2.5e-7
+            joint_power = -2e-5
+            torques = -1e-4
+            action_rate = -0.01
+            smoothness = -0.01
+            dof_vel = -2e-5
+            dof_pos_limits = -0.01
+            dof_vel_limits = -0.01
+            torque_limits = -1e-3
+
+            base_height = -5
+            foot_clearance = -0.0
+            feet_regulation = -0.0
+            feet_air_time = 1
+            collision = -0.02
+            feet_stumble = -0.0
+            stand_still = -0.0
+            # hip_pos0 = -0.05
+            hip_pos1 = -0.05
+            thigh_pose0 = -0.01
+            calf_pose0 = -0.01
+            x_command_hip_regular = -0.0
+            feet_contact_forces = -0.00015
+            trot = 0.0
+            feet_mirror = -0.1
 
         only_positive_rewards = False # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)

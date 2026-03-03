@@ -1501,6 +1501,18 @@ class Go1Robot(BaseTask):
         #   XY方向线速度 >= 0.1 m/s 时，惩罚力度为 1.0
         return hip_deviation
 
+    def _reward_hip_pos1(self):
+        # 惩罚 hip关节（0,3,6,9）与默认位置的 偏差， (原地不动 或 原地旋转) 时惩罚系数为 5.0，其他为 1.0
+        hip_deviation = torch.sum(torch.abs(self.dof_pos[:, [0, 3, 6, 9]] - self.default_dof_pos[:, [0, 3, 6, 9]]), dim=1)
+        cmd_norm = torch.norm(self.commands[:, :3], dim=1)
+        fwd_ratio = torch.where(cmd_norm > 1e-8,
+                                torch.abs(self.commands[:, 0]) / cmd_norm,
+                                torch.zeros_like(cmd_norm))
+        # 当前进速度占比 > 0.5 时，奖励乘以 2
+        rew = hip_deviation
+        rew = torch.where(fwd_ratio > 0.5, rew * 2.0, rew)
+        return rew
+
     def _reward_thigh_pose0(self):
         thigh_deviation = torch.sum(torch.abs(self.dof_pos[:, [1, 4, 7, 10]] - self.default_dof_pos[:, [1, 4, 7, 10]]), dim=1)
         return thigh_deviation
